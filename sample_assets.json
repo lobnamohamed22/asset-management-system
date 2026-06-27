@@ -1,0 +1,106 @@
+{
+  "assets": [
+    {
+      "type": "domain",
+      "value": "google.com",
+      "status": "active",
+      "source": "network_scanner",
+      "tags": ["production", "external"],
+      "metadata": {
+        "registrar": "MarkMonitor Inc.",
+        "owner": "Google LLC"
+      }
+    },
+    {
+      "type": "subdomain",
+      "value": "api.google.com",
+      "status": "active",
+      "source": "dns_recon",
+      "tags": ["production", "api"],
+      "metadata": {
+        "ip_address": "8.8.8.8",
+        "ttl": 300
+      }
+    },
+    {
+      "type": "subdomain",
+      "value": "mail.google.com",
+      "status": "active",
+      "source": "dns_recon",
+      "tags": ["internal", "email"],
+      "metadata": {
+        "ip_address": "8.8.8.8",
+        "mx_record": "mail.google.com"
+      }
+    },
+    {
+      "type": "ip_address",
+      "value": "8.8.8.8",
+      "status": "active",
+      "source": "shodan",
+      "tags": ["dns", "google_dns"],
+      "metadata": {
+        "country": "US",
+        "asn": "AS15169"
+      }
+    },
+    {
+      "type": "service",
+      "value": "80/tcp",
+      "status": "active",
+      "source": "nmap",
+      "tags": ["http", "insecure"],
+      "metadata": {
+        "ip_address": "8.8.8.8",
+        "state": "open",
+        "product": "nginx"
+      }
+    },
+    {
+      "type": "service",
+      "value": "443/tcp",
+      "status": "active",
+      "source": "nmap",
+      "tags": ["https", "secure"],
+      "metadata": {
+        "ip_address": "8.8.8.8",
+        "state": "open",
+        "product": "nginx"
+      }
+    },
+    {
+      "type": "certificate",
+      "value": "google-wildcard-cert",
+      "status": "active",
+      "source": "ct_log",
+      "tags": ["ssl", "security"],
+      "metadata": {
+        "domains": ["google.com", "api.google.com"],
+        "issuer": "Google Trust Services LLC",
+        "expiry": "2026-12-31"
+      }
+    },
+    {
+      "type": "technology",
+      "value": "nginx",
+      "status": "active",
+      "source": "wappalyzer",
+      "tags": ["web_server"],
+      "metadata": {
+        "services": ["80/tcp", "443/tcp"],
+        "version": "1.24.0"
+      }
+    },
+    {
+      "type": "technology",
+      "value": "React",
+      "status": "active",
+      "source": "wappalyzer",
+      "tags": ["frontend_framework"],
+      "metadata": {
+        "subdomains": ["api.google.com"],
+        "version": "18.2.0"
+      }
+    }
+  ]
+}

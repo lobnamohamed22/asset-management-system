@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Management - Relationship Graph</title>
+    <!-- vis-network library -->
+    <script type="text/javascript" src="/static/vis-network.min.js"></script>
+    <!-- Google Fonts Outfit & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: #1e293b;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            z-index: 10;
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        input, button, select {
+            font-family: inherit;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        input {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #f1f5f9;
+            padding: 0.5rem 0.75rem;
+        }
+        input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: white;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        .btn-secondary {
+            background-color: #334155;
+            color: #f1f5f9;
+            border: 1px solid #475569;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            position: relative;
+            height: calc(100vh - 65px);
+        }
+        #network-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+        #network {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        #network:active {
+            cursor: grabbing;
+        }
+        .sidebar {
+            width: 320px;
+            background-color: #1e293b;
+            border-left: 1px solid #334155;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 5;
+            box-shadow: -4px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        .sidebar h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            color: #f8fafc;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .info-value {
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            word-break: break-all;
+        }
+        .tag-pill {
+            display: inline-block;
+            background-color: #334155;
+            color: #38bdf8;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        pre {
+            background-color: #0f172a;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            color: #a7f3d0;
+            border: 1px solid #1e293b;
+        }
+        .legend {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            background-color: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 2;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .login-card {
+            background-color: #1e293b;
+            padding: 2.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .login-card h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            text-align: center;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 0.85rem;
+            text-align: center;
+            display: none;
+        }
+        #close-sidebar {
+            align-self: flex-end;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 1.25rem;
+            padding: 0;
+        }
+        #close-sidebar:hover {
+            color: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Authentication Overlay -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>AMS Graph Login</h2>
+            <div class="login-form">
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button class="btn-primary" onclick="handleLogin()">Sign In</button>
+            </div>
+            <div class="error-message" id="error-msg">Invalid username or password.</div>
+            <div style="font-size: 0.8rem; text-align: center; color: #64748b;">
+                Need an account? Register via the API (`/api/v1/auth/register`) first.
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <h1>🛡️ Asset Management Graph</h1>
+        <div class="controls">
+            <button class="btn-secondary" onclick="fetchAndRenderGraph()">🔄 Refresh</button>
+            <button class="btn-secondary" onclick="handleLogout()">Logout</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="network-container">
+            <div id="network"></div>
+            <!-- Type Legend -->
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background-color: #4F46E5;"></div>Domain</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #06B6D4;"></div>Subdomain</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #F59E0B;"></div>IP Address</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #10B981;"></div>Service</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #EC4899;"></div>Certificate</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: #8B5CF6;"></div>Technology</div>
+            </div>
+        </div>
+
+        <!-- Sidebar for details -->
+        <div class="sidebar" id="details-sidebar">
+            <button id="close-sidebar" onclick="closeSidebar()">✖</button>
+            <h2>Asset Inspector</h2>
+            
+            <div class="info-group">
+                <div class="info-label">Type</div>
+                <div class="info-value" id="info-type">-</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Value</div>
+                <div class="info-value" style="font-weight: 600; color: #38bdf8;" id="info-value">-</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Status</div>
+                <div class="info-value" id="info-status">-</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Source</div>
+                <div class="info-value" id="info-source">-</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Tags</div>
+                <div id="info-tags">-</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Metadata</div>
+                <pre id="info-metadata">{}</pre>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let network = null;
+        let allAssets = [];
+
+        // Check if token already exists in localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('ams_jwt_token');
+            if (token) {
+                document.getElementById('login-overlay').style.display = 'none';
+                fetchAndRenderGraph();
+            }
+        });
+
+        async function handleLogin() {
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            // Send OAuth2 form data
+            const formData = new URLSearchParams();
+            formData.append('username', usernameInput);
+            formData.append('password', passwordInput);
+
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('ams_jwt_token', data.access_token);
+                    document.getElementById('login-overlay').style.display = 'none';
+                    errorMsg.style.display = 'none';
+                    fetchAndRenderGraph();
+                } else {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = "Invalid credentials. Ensure your user is registered.";
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = "Error connecting to server.";
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('ams_jwt_token');
+            document.getElementById('login-overlay').style.display = 'flex';
+            if (network) {
+                network.destroy();
+                network = null;
+            }
+            closeSidebar();
+        }
+
+        async function fetchAndRenderGraph() {
+            const token = localStorage.getItem('ams_jwt_token');
+            if (!token) return;
+
+            try {
+                // First fetch actual asset objects to show full details in inspector
+                const assetsRes = await fetch('/api/v1/assets?limit=500', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!assetsRes.ok) {
+                    if (assetsRes.status === 401) return handleLogout();
+                    alert("Error loading assets details");
+                    return;
+                }
+                allAssets = await assetsRes.json();
+
+                // Fetch graph edges and nodes
+                const graphRes = await fetch('/api/v1/assets/graph', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!graphRes.ok) return;
+                const graphData = await graphRes.json();
+                console.log("Loaded assets:", allAssets);
+                console.log("Loaded graph nodes:", graphData.nodes);
+                console.log("Loaded graph edges:", graphData.edges);
+
+                renderGraph(graphData.nodes, graphData.edges);
+            } catch (err) {
+                console.error("Error in fetchAndRenderGraph:", err);
+                alert("Error loading graph. Make sure backend is running.");
+            }
+        }
+
+        function renderGraph(nodes, edges) {
+            console.log("Initializing vis-network with nodes & edges...");
+            const container = document.getElementById('network');
+            const data = {
+                nodes: new vis.DataSet(nodes),
+                edges: new vis.DataSet(edges)
+            };
+
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    size: 16,
+                    borderWidth: 2,
+                    shadow: true,
+                    font: {
+                        size: 11,
+                        face: 'Inter',
+                        strokeWidth: 3,
+                        strokeColor: '#1e293b'
+                    }
+                },
+                edges: {
+                    width: 2,
+                    shadow: true,
+                    smooth: {
+                        type: 'cubicBezier',
+                        forceDirection: 'none',
+                        roundness: 0.5
+                    }
+                },
+                physics: {
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -100, // Stronger repulsion to spread nodes
+                        centralGravity: 0.01,
+                        springLength: 300,           // Spreads out connected nodes
+                        springConstant: 0.05,
+                        avoidOverlap: 1.0            // Actively avoid node overlapping
+                    },
+                    maxVelocity: 50,                 // Lower speed for smoother settlement
+                    timestep: 0.35,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 1500,            // Extra iterations to ensure it loads static
+                        updateInterval: 50
+                    }
+                },
+                layout: {
+                    randomSeed: 42                   // Constant seed to make layout deterministic
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 200
+                }
+            };
+
+            network = new vis.Network(container, data, options);
+
+            // Click node handler
+            network.on('click', function(properties) {
+                const ids = properties.nodes;
+                if (ids.length > 0) {
+                    const clickedId = ids[0];
+                    showAssetDetails(clickedId);
+                } else {
+                    closeSidebar();
+                }
+            });
+        }
+
+        function showAssetDetails(assetId) {
+            const asset = allAssets.find(a => a.id === assetId);
+            if (!asset) return;
+
+            document.getElementById('info-type').innerText = asset.type;
+            document.getElementById('info-value').innerText = asset.value;
+            document.getElementById('info-status').innerText = asset.status.toUpperCase();
+            document.getElementById('info-source').innerText = asset.source;
+
+            // Render tags
+            const tagsContainer = document.getElementById('info-tags');
+            tagsContainer.innerHTML = '';
+            if (asset.tags && asset.tags.length > 0) {
+                asset.tags.forEach(t => {
+                    const span = document.createElement('span');
+                    span.className = 'tag-pill';
+                    span.innerText = t;
+                    tagsContainer.appendChild(span);
+                });
+            } else {
+                tagsContainer.innerText = 'No tags';
+            }
+
+            // Render metadata JSON
+            document.getElementById('info-metadata').innerText = JSON.stringify(asset.metadata, null, 2);
+
+            // Open sidebar
+            document.getElementById('details-sidebar').classList.add('open');
+        }
+
+        function closeSidebar() {
+            document.getElementById('details-sidebar').classList.remove('open');
+        }
+    </script>
+</body>
+</html>
